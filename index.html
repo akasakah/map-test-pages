@@ -2,60 +2,98 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>ボタン押下状態</title>
+  <title>ESP32 ボタン監視</title>
+
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
       margin-top: 50px;
     }
-    #status {
+
+    h1 {
       font-size: 2em;
-      margin-top: 20px;
+    }
+
+    #status {
+      font-size: 1.8em;
+      margin: 20px;
+    }
+
+    #time {
+      font-size: 1.2em;
+      color: #444;
+    }
+
+    #elapsed {
+      font-size: 1.5em;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>ESP32 ボタン状態</h1>
+  <h1>ESP32 ボタン監視</h1>
+
   <div id="status">読み込み中...</div>
+  <div id="time"></div>
+  <div id="elapsed"></div>
 
   <script>
+    // ===== 設定 =====
     const CHANNEL_ID = "3247896";
     const READ_API_KEY = "4B0IWZ9A8I6MQFZV";
     const FIELD_NUMBER = 1;
 
+    // ===== 変数 =====
+    let lastEventTimeJST = null;
+
     const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/fields/${FIELD_NUMBER}/last.json?api_key=${READ_API_KEY}`;
 
-    async function fetchButtonState() {
+    // ===== ThingSpeak から最新イベント取得 =====
+    async function fetchLastEvent() {
       try {
         const response = await fetch(url);
         const data = await response.json();
 
-        const value = data[`field${FIELD_NUMBER}`];
-        const createdAt = data.created_at;
+        if (data.field1 === "1") {
+          // UTC → JST（+9時間）
+          const utcTime = new Date(data.created_at);
+          lastEventTimeJST = new Date(utcTime.getTime() + 9 * 60 * 60 * 1000);
 
-        const statusDiv = document.getElementById("status");
+          document.getElementById("status").textContent =
+            "🚨 最後にボタンが押されました";
 
-        if (value === "1") {
-          statusDiv.textContent = "ボタンが押されました！";
-        } else {
-          statusDiv.textContent = "待機中";
+          document.getElementById("time").textContent =
+            "時刻（JST）: " + lastEventTimeJST.toLocaleString("ja-JP");
         }
-
-        statusDiv.textContent += `\n(${createdAt})`;
       } catch (error) {
         document.getElementById("status").textContent = "取得エラー";
         console.error(error);
       }
     }
 
-    // 初回実行
-    fetchButtonState();
+    // ===== 経過秒数表示 =====
+    function updateElapsedTime() {
+      if (!lastEventTimeJST) return;
 
-    // 15秒ごとに更新（ThingSpeak制限対策）
-    setInterval(fetchButtonState, 15000);
+      const now = new Date();
+      const diffSec = Math.floor((now - lastEventTimeJST) / 1000);
+
+      document.getElementById("elapsed").textContent =
+        `最後の押下から ${diffSec} 秒経過`;
+    }
+
+    // 初回取得
+    fetchLastEvent();
+
+    // ThingSpeak は 15秒ごと
+    setInterval(fetchLastEvent, 15000);
+
+    // 経過時間は 1秒ごと
+    setInterval(updateElapsedTime, 1000);
   </script>
 
 </body>
 </html>
+
