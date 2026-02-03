@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ボタン押下状態</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 50px;
+    }
+    #status {
+      font-size: 2em;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ESP32 ボタン状態</h1>
+  <div id="status">読み込み中...</div>
+
+  <script>
+    const CHANNEL_ID = "3247896";
+    const READ_API_KEY = "4B0IWZ9A8I6MQFZV";
+    const FIELD_NUMBER = 1;
+
+    const url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/fields/${FIELD_NUMBER}/last.json?api_key=${READ_API_KEY}`;
+
+    async function fetchButtonState() {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const value = data[`field${FIELD_NUMBER}`];
+        const createdAt = data.created_at;
+
+        const statusDiv = document.getElementById("status");
+
+        if (value === "1") {
+          statusDiv.textContent = "🚨 ボタンが押されました！";
+        } else {
+          statusDiv.textContent = "待機中";
+        }
+
+        statusDiv.textContent += `\n(${createdAt})`;
+      } catch (error) {
+        document.getElementById("status").textContent = "取得エラー";
+        console.error(error);
+      }
+    }
+
+    // 初回実行
+    fetchButtonState();
+
+    // 15秒ごとに更新（ThingSpeak制限対策）
+    setInterval(fetchButtonState, 15000);
+  </script>
+
+</body>
+</html>
