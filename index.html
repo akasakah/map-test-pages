@@ -59,7 +59,7 @@
         if (data.field1 === "1") {
           // UTC → JST（+9時間）
           const utcTime = new Date(data.created_at);
-          lastEventTimeJST = new Date(utcTime.getTime() + 9 * 60 * 60 * 1000);
+          lastEventTimeJST = new Date(utcTime.getTime());
 
           document.getElementById("status").textContent =
             "🚨 最後にボタンが押されました";
